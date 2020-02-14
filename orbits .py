@@ -12,6 +12,7 @@ from scipy.integrate import solve_ivp
 from scipy.optimize import root
 plt.close("all")
 
+
 #******************************************************************************
 '''-------------------------------variables---------------------------------''' 
 
