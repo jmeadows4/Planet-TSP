@@ -6,7 +6,8 @@ plt.close("all")
 
 class Planet:
 
-    def __init__(self, m, ec, ax, factor):
+    def __init__(self, m, name, ec, ax, factor):
+        self.name = name
         self.mass = m
         self.ecc = ec
         self.a = ax
@@ -26,24 +27,21 @@ class Planet:
 #####################   Globals   ############################################
 Sun_mass = 1
 G = 4*np.pi**2
-n_t = 500
 
-mercury = Planet(1.652e-7, .2056, .3870, 1/2)
-venus = Planet(2.447e-6, .0068, .7219, 1/3)
-earth = Planet(3.003e-6, .017, 1.00001423349, 0)
-mars = Planet(3.213e-7, .0934, 1.52408586388, 7/8)
-jupiter = Planet(9.543e-4, .0484, 5.2073, 11/8)
-saturn = Planet(2.857e-4, .0542, 9.5590, 0)
-uranus = Planet(4.365e-5, .0472, 19.1848, 13/16)
-neptune = Planet(5.145e-5, .0086, 30.0806, 9/16)
+mercury = Planet(1.652e-7, "Mercury", .2056, .3870, 1/2)
+venus = Planet(2.447e-6, "Venus", .0068, .7219, 1/3)
+earth = Planet(3.003e-6, "Earth", .017, 1.00001423349, 0)
+mars = Planet(3.213e-7, "Mars", .0934, 1.52408586388, 7/8)
+jupiter = Planet(9.543e-4, "Jupiter", .0484, 5.2073, 11/8)
+saturn = Planet(2.857e-4, "Saturn", .0542, 9.5590, 0)
+uranus = Planet(4.365e-5, "Uranus", .0472, 19.1848, 13/16)
+neptune = Planet(5.145e-5, "Neptune", .0086, 30.0806, 9/16)
 
-planets = [earth, mars, mercury, venus, jupiter, saturn, uranus, neptune]
 init_cond = np.zeros(4)
 t_min = -1
 t_max = -1
 next_planet = None
 ###############################################################################
-
 
 def Rocket_man(time, state):                        #I think it's going to be a long, long time
     #Solves diff eq with time inputed, and initial conditions (states)
@@ -96,19 +94,18 @@ def Rocket_man(time, state):                        #I think it's going to be a 
 
     return rhs
 
-dist_x = .01
-dist_y = .01
-
 #this function will use the global variables t_min/t_max, init_cond, and next_planet
 def get_planet_dist(init_vel):
 
-    global dist_x
-    global dist_y
+    #return a large value if it tries a large velocity
+    if abs(init_vel[0]) > 20 or abs(init_vel[1]) > 20 :
+        return [100000, 100000]
 
     init_cond[2] = init_vel[0]
     init_cond[3] = init_vel[1]
 
     sol = solve_ivp(Rocket_man, (t_min, t_max), init_cond, rtol = 1e-4)
+
     sol_x = sol.y[0, :]
     sol_y = sol.y[1, :]
 
@@ -120,50 +117,39 @@ def get_planet_dist(init_vel):
     print("Correct initial velocities: ", init_vel)
     print("Time taken to reach planet: ", sol.t[dist_argmin] )
     print("Minimum distance index: ", dist_argmin)
+
     return [dist_x + 1e-3, dist_y + 1e-3]
 
 
 
-#### Code to get from Earth to Mars. Does not use get_planet_dist() function yet ####
+def plot(start_p, end_p, sol):
+    sol_x = sol.y[0, :]
+    sol_y = sol.y[1, :]
+    plt.plot(sol_x, sol_y, '*g', label = 'Rocket Path', markersize = 4)
+    plt.plot(start_p.get_x(sol.t), start_p.get_y(sol.t), 'ob', label = start_p.name, markersize = 2)
+    plt.plot(end_p.get_x(sol.t), end_p.get_y(sol.t), 'or', label = end_p.name, markersize = 2)
+    plt.plot(0, 0, 'o', color = 'orange', markersize = 7)
+    plt.legend()
+    plt.xlabel("Au")
+    plt.ylabel("Au")
+    plt.show()
 
-init_cond[0] = earth.get_x(0) + .01
-init_cond[1] = earth.get_y(0) + .01
-init_cond[2] = 2
-init_cond[3] = -6.188
-v0 = [2, -6.188]
+
+#uses root to get a best initial velocity guess
+cur_planet = earth
+next_planet = mars
+init_cond[0] = cur_planet.get_x(0) + .01
+init_cond[1] = cur_planet.get_y(0) + .01
 t_min = 0
 t_max = .5
+v0 = [2, -6]
+next_vel = root(get_planet_dist, v0)
 
-time = np.linspace(t_min, t_max, n_t)
-
+#uses the final velocity from root for one last solve_ivp. I only do this to get sol
+init_cond[2] = next_vel.x[0]
+init_cond[3] = next_vel.x[1]
 sol = solve_ivp(Rocket_man, (t_min, t_max), init_cond, rtol = 1e-8)
-sol_x = sol.y[0, :]
-sol_y = sol.y[1, :]
+if sol.status < 0:
+    print("uh oh, error!")
 
-
-plt.plot(sol_x, sol_y, '*g', label = 'Rocket Path', markersize = 4)
-plt.plot(earth.get_x(sol.t), earth.get_y(sol.t), 'ob', label = 'Earth', markersize = 1)
-plt.plot(mars.get_x(sol.t), mars.get_y(sol.t), 'or', label = 'Mars', markersize = 1)
-plt.plot(0, 0, 'o', color = 'orange', markersize = 7)
-plt.legend()
-plt.xlabel("Au")
-plt.ylabel("Au")
-plt.show()
-
-
-
-
-
-
-# This code doesn't work yet.
-# for i in range(1,3):
-#
-#     #before each root call, we will need to update init_cond, tmin/tmax, and next_planet
-#     next_planet = planets[i]
-#     #wait.... root returns the optimized velocities, not the minimum distance....
-#     print("Starting next planet adventure :)")
-#     next_vel = root(get_planet_dist, v0)
-#
-#     v0 = next_vel.x # .x returns the optimized values
-#     init_cond[0] = dist_x
-#     init_cond[1] = dist_y
+plot(cur_planet, next_planet, sol)
