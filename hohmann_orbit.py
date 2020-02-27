@@ -1,8 +1,7 @@
-#!/usr/bin/env python3
+##!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
 Created on Thu Feb 13 10:07:35 2020
-
 @author: dcanderson
 """
 #imports
@@ -97,11 +96,11 @@ r1 = np.sqrt(x_earth(t)**2 + y_earth(t)**2) #distances from origin to planet
 r2 = np.sqrt(x_mars(t)**2 + y_mars(t)**2)
 
 def delta_v1_x(t): #x component of change in vel #put us into orbit 1? (see wiki) #turns out we wont be using v1
-    v1_x = np.sqrt(mu/r1)*(np.sqrt(2*r1/(r1 + r2))-1)
+    v1_x = np.sqrt(mu/r1)*(np.sqrt(2*r2/(r1 + r2))-1)
     return v1_x*(-1*np.sin(theta_earth(t)))
 
 def delta_v1_y(t): #y component of change in vel
-    v1_y = np.sqrt(mu/r1)*(np.sqrt(2*r1/(r1 + r2))-1)
+    v1_y = np.sqrt(mu/r1)*(np.sqrt(2*r2/(r1 + r2))-1)
     return v1_y*np.cos(theta_earth(t))
 
 def delta_v2_x(t): #x comp #to get from orbit 1 to orbit 2 (see wiki) #correct delta v to get us to radius
