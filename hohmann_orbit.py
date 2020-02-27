@@ -37,21 +37,28 @@ w_mars = 2*np.pi/1.88                               #angular freq in rads/earth 
     
     
 #Functions-------------------------------------------------------------
+
+def theta_earth(time):
+    return w_earth*time
+
+def theta_mars(time):
+    return w_mars*time + 7*np.pi/8
+
 def x_earth(time):  
     #earth's x position as function of time
-    return a_earth*np.cos(w_earth*time) + c_earth
+    return a_earth*np.cos(theta_earth(time)) + c_earth
 
 def y_earth(time):  
     #earth's y position as function of time
-    return b_earth*np.sin(w_earth*time)
+    return b_earth*np.sin(theta_earth(time))
 
 def x_mars(time):  
     #mars's x position as function of time
-    return a_mars*np.cos(w_mars*time + 7*np.pi/8) + c_mars
+    return a_mars*np.cos(theta_mars(time)) + c_mars
 
 def y_mars(time): 
     #mars's y position as function of time
-    return b_mars*np.sin(w_mars*time + 7*np.pi/8)
+    return b_mars*np.sin(theta_mars(time))
 
 def Rocket_man(time, state):                        #I think it's going to be a long, long time
     #Solves diff eq with time inputed, and initial conditions (states)
@@ -86,32 +93,57 @@ def Rocket_man(time, state):                        #I think it's going to be a 
     
     return rhs
 
-r1 = np.sqrt(x_earth(t)**2 + y_earth(t)**2)
+r1 = np.sqrt(x_earth(t)**2 + y_earth(t)**2) #distances from origin to planet
 r2 = np.sqrt(x_mars(t)**2 + y_mars(t)**2)
 
-def delta_v1(t): #to get from orbit 1 to orbit 2 (see wiki)
-    v1 = np.sqrt(mu/r1)*(np.sqrt(2*r1/(r1 + r2))-1)
-    return v1
+def delta_v1_x(t): #x component of change in vel #put us into orbit 1? (see wiki) #turns out we wont be using v1
+    v1_x = np.sqrt(mu/r1)*(np.sqrt(2*r1/(r1 + r2))-1)
+    return v1_x*(-1*np.sin(theta_earth(t)))
 
-def delta_v2(t): #to get from orbit 2 to orbit 3 (see wiki) may not use right away
-    v2 = np.sqrt(mu/r2)*(1 - np.sqrt(2*r1/(r1 + r2)))
-    return v2
+def delta_v1_y(t): #y component of change in vel
+    v1_y = np.sqrt(mu/r1)*(np.sqrt(2*r1/(r1 + r2))-1)
+    return v1_y*np.cos(theta_earth(t))
+
+def delta_v2_x(t): #x comp #to get from orbit 1 to orbit 2 (see wiki) #correct delta v to get us to radius
+    v2_x = np.sqrt(mu/r2)*(1 - np.sqrt(2*r1/(r1 + r2)))
+    return v2_x*(-1*np.sin(theta_earth(t)))
     
+def delta_v2_y(t): #y comp
+    v2_y = np.sqrt(mu/r2)*(1 - np.sqrt(2*r1/(r1 + r2)))
+    return v2_y*(np.cos(theta_earth(t)))
+
 def ang_alignment(t): #has to do with starting vel change when bodies are properly aligned
     a = pi*(1 - (1/4)*(np.sqrt(2*(r1/r2 + 1)**3)))
     return a
 
 #But for now, just looking to get to correct radius, so will not use ang alignment as of yet
 #will use angular velocity of planet to get tangential velocity so we can use that velocity to calculate the direction of our new vel
-def tan_vel(w): #just to get from earth to mars, will have to generalize the radii (r1, r2)
-    tan_v = w*r1
-    return tan_v
+def tan_vel_x(w, time): #x component of tan vel #will have to generalize the radii (r1, r2)
+    tan_v_x = w*r1*(-1*np.sin(theta_earth(time)))
+    return tan_v_x
+
+def tan_vel_y(w, time): #y component of tan vel
+    tan_v_y = w*r1*(np.cos(theta_earth(time)))
+    return tan_v_y
 
 init_cond = np.zeros(4)
-init_cond[0] = x_earth(0)
-init_cond[1] = y_earth(0)
-init_cond[2] = 0
-init_cond[3] = tan_vel(w_earth) + delta_v1
+init_cond[0] = x_earth(0) + .01
+init_cond[1] = y_earth(0) + .01
+init_cond[2] = tan_vel_x(w_earth, t) + delta_v2_x(t)
+init_cond[3] = tan_vel_y(w_earth, t) + delta_v2_y(t)
 
-sol = solve_ivp(Rocket_man, init_cond)
+t_min = 0 #for interval in solve_ivp
+t_max = 1
+sol = solve_ivp(Rocket_man, (t_min, t_max), init_cond, rtol = 1e-8)
+sol_x = sol.y[0, :]
+sol_y = sol.y[1, :]
 
+t_array = np.linspace(0, 2, 100) #for plotting complete orbits of planets
+
+plt.figure()
+plt.plot(sol_x, sol_y, '*g', label = "Rocket", markersize = 4)
+plt.plot(x_earth(t_array), y_earth(t_array), 'ob', label = "Earth", markersize = 1)
+plt.plot(x_mars(t_array), y_mars(t_array), 'or', label = "Mars", markersize = 1)
+plt.plot(0, 0, 'o', color = 'orange', label = "Sun", markersize = 7)
+plt.legend()
+plt.show()
