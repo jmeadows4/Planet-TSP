@@ -1,3 +1,6 @@
+#Look into making a root function
+#Hohmann Transfers - Tangential Velocity?
+
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.integrate import solve_ivp
@@ -5,37 +8,40 @@ from scipy.optimize import root
 plt.close("all")
 
 class Planet:
-
-    def __init__(self, m, name, ec, ax, factor):
-        self.name = name
+    def __init__(self, m, name, ec, ax, factor, w_factor):
         self.mass = m
+        self.name = name
         self.ecc = ec
         self.a = ax
         self.b = ax * np.sqrt(1 - ec**2)
         self.c = ax * ec
         self.p = ax**(3/2)
-        self.w = 2*np.pi/.24
+        #need to update, shouldn't be .24
+        self.w = 2*np.pi/w_factor
         self.pi_factor = factor
-        self.next = None
     def get_x(self, time):
         return self.a * np.cos(self.w*time - self.pi_factor*np.pi) + self.c
     def get_y(self, time):
         return self.b * np.sin(self.w*time - self.pi_factor*np.pi)
     def get_r(self, time):
         return np.sqrt(self.get_x(self, time)**2 + self.get_y(self, time)**2)
-
+    def get_tang_vel(self, time):
+        return self.get_r(time) * self.w
+    def get_roche():
+        q = self.mass
+        return get_r(self, time) * (.49 * q**(2/3)) / (.6 * q**(2/3) + log(1 + q**(1/3)))
 #####################   Globals   ############################################
 Sun_mass = 1
 G = 4*np.pi**2
 
-mercury = Planet(1.652e-7, "Mercury", .2056, .3870, 1/2)
-venus = Planet(2.447e-6, "Venus", .0068, .7219, 1/3)
-earth = Planet(3.003e-6, "Earth", .017, 1.00001423349, 0)
-mars = Planet(3.213e-7, "Mars", .0934, 1.52408586388, 7/8)
-jupiter = Planet(9.543e-4, "Jupiter", .0484, 5.2073, 11/8)
-saturn = Planet(2.857e-4, "Saturn", .0542, 9.5590, 0)
-uranus = Planet(4.365e-5, "Uranus", .0472, 19.1848, 13/16)
-neptune = Planet(5.145e-5, "Neptune", .0086, 30.0806, 9/16)
+mercury = Planet(1.652e-7, "Mercury", .2056, .3870, 1/2, .24 )
+venus = Planet(2.447e-6, "Venus", .0068, .7219, 1/3, .616)
+earth = Planet(3.003e-6, "Earth", .017, 1.00001423349, 0, 1)
+mars = Planet(3.213e-7, "Mars", .0934, 1.52408586388, 7/8, 1.88)
+jupiter = Planet(9.543e-4, "Jupiter", .0484, 5.2073, 11/8, 12)
+saturn = Planet(2.857e-4, "Saturn", .0542, 9.5590, 0, 29)
+uranus = Planet(4.365e-5, "Uranus", .0472, 19.1848, 13/16, 84)
+neptune = Planet(5.145e-5, "Neptune", .0086, 30.0806, 9/16, 165)
 
 init_cond = np.zeros(4)
 t_min = -1
@@ -95,7 +101,7 @@ def Rocket_man(time, state):                        #I think it's going to be a 
     return rhs
 
 #this function will use the global variables t_min/t_max, init_cond, and next_planet
-def get_planet_dist(init_vel):
+def roc_to_planet_dist(init_vel):
 
     #return a large value if it tries a large velocity
     if abs(init_vel[0]) > 20 or abs(init_vel[1]) > 20 :
@@ -117,23 +123,20 @@ def get_planet_dist(init_vel):
     print("Correct initial velocities: ", init_vel)
     print("Time taken to reach planet: ", sol.t[dist_argmin] )
     print("Minimum distance index: ", dist_argmin)
-
-    return [dist_x + 1e-3, dist_y + 1e-3]
-
-
+    print("Status: ", sol.success)
+    return [dist_x, dist_y]
 
 def plot(start_p, end_p, sol):
     sol_x = sol.y[0, :]
     sol_y = sol.y[1, :]
     plt.plot(sol_x, sol_y, '*g', label = 'Rocket Path', markersize = 4)
-    plt.plot(start_p.get_x(sol.t), start_p.get_y(sol.t), 'ob', label = start_p.name, markersize = 2)
-    plt.plot(end_p.get_x(sol.t), end_p.get_y(sol.t), 'or', label = end_p.name, markersize = 2)
+    plt.plot(start_p.get_x(sol.t), start_p.get_y(sol.t), 'ob', label = start_p.name, markersize = 1)
+    plt.plot(end_p.get_x(sol.t), end_p.get_y(sol.t), 'or', label = end_p.name, markersize = 1)
     plt.plot(0, 0, 'o', color = 'orange', markersize = 7)
     plt.legend()
     plt.xlabel("Au")
     plt.ylabel("Au")
     plt.show()
-
 
 #uses root to get a best initial velocity guess
 cur_planet = earth
@@ -143,13 +146,10 @@ init_cond[1] = cur_planet.get_y(0) + .01
 t_min = 0
 t_max = .5
 v0 = [2, -6]
-next_vel = root(get_planet_dist, v0)
+next_vel = root(roc_to_planet_dist, v0)
 
 #uses the final velocity from root for one last solve_ivp. I only do this to get sol
 init_cond[2] = next_vel.x[0]
 init_cond[3] = next_vel.x[1]
 sol = solve_ivp(Rocket_man, (t_min, t_max), init_cond, rtol = 1e-8)
-if sol.status < 0:
-    print("uh oh, error!")
-
 plot(cur_planet, next_planet, sol)
