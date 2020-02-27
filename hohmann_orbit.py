@@ -138,7 +138,7 @@ sol = solve_ivp(Rocket_man, (t_min, t_max), init_cond, rtol = 1e-8)
 sol_x = sol.y[0, :]
 sol_y = sol.y[1, :]
 
-t_array = np.linspace(0, 2, 100) #for plotting complete orbits of planets
+t_array = np.linspace(0, 1.88, 100) #for plotting complete orbits of planets
 
 plt.figure()
 plt.plot(sol_x, sol_y, '*g', label = "Rocket", markersize = 4)
