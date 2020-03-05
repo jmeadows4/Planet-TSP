@@ -1,10 +1,10 @@
-#Look into making a root function
-#Hohmann Transfers - Tangential Velocity?
+#Look into calculating total energy?
 
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.integrate import solve_ivp
-from scipy.optimize import root
+from scipy.optimize import minimize
+from math import log, sin, cos
 plt.close("all")
 
 class Planet:
@@ -16,25 +16,28 @@ class Planet:
         self.b = ax * np.sqrt(1 - ec**2)
         self.c = ax * ec
         self.p = ax**(3/2)
-        #need to update, shouldn't be .24
         self.w = 2*np.pi/w_factor
         self.pi_factor = factor
     def get_x(self, time):
-        return self.a * np.cos(self.w*time - self.pi_factor*np.pi) + self.c
+        return self.a * np.cos(self.w*time + self.pi_factor*np.pi) + self.c
     def get_y(self, time):
-        return self.b * np.sin(self.w*time - self.pi_factor*np.pi)
+        return self.b * np.sin(self.w*time + self.pi_factor*np.pi)
     def get_r(self, time):
-        return np.sqrt(self.get_x(self, time)**2 + self.get_y(self, time)**2)
-    def get_tang_vel(self, time):
-        return self.get_r(time) * self.w
+        return np.sqrt(self.get_x(time)**2 + self.get_y(time)**2)
+    def get_tang_vel_x(self, time):
+        theta = self.w*time + self.pi_factor*np.pi
+        v_tang_x = -self.w * self.get_r(time) * sin(theta)
+        return v_tang_x
+    def get_tang_vel_y(self, time):
+        theta = self.w*time + self.pi_factor*np.pi
+        v_tang_y = self.w * self.get_r(time) * cos(theta)
+        return v_tang_y
     def get_roche():
         q = self.mass
         return get_r(self, time) * (.49 * q**(2/3)) / (.6 * q**(2/3) + log(1 + q**(1/3)))
 #####################   Globals   ############################################
-Sun_mass = 1
-G = 4*np.pi**2
 
-mercury = Planet(1.652e-7, "Mercury", .2056, .3870, 1/2, .24 )
+mercury = Planet(1.652e-7, "Mercury", .2056, .3870, -1/2, .24 )
 venus = Planet(2.447e-6, "Venus", .0068, .7219, 1/3, .616)
 earth = Planet(3.003e-6, "Earth", .017, 1.00001423349, 0, 1)
 mars = Planet(3.213e-7, "Mars", .0934, 1.52408586388, 7/8, 1.88)
@@ -44,9 +47,13 @@ uranus = Planet(4.365e-5, "Uranus", .0472, 19.1848, 13/16, 84)
 neptune = Planet(5.145e-5, "Neptune", .0086, 30.0806, 9/16, 165)
 
 init_cond = np.zeros(4)
-t_min = -1
-t_max = -1
+t_min = 0
+t_max = 0
 next_planet = None
+dist_argmin = -1
+Sun_mass = 1
+G = 4*np.pi**2
+mu = Sun_mass * G
 ###############################################################################
 
 def Rocket_man(time, state):                        #I think it's going to be a long, long time
@@ -100,56 +107,109 @@ def Rocket_man(time, state):                        #I think it's going to be a 
 
     return rhs
 
-#this function will use the global variables t_min/t_max, init_cond, and next_planet
+# This function will use the global variables t_min/t_max, init_cond, and next_planet.
+# The variables cannot be passed in because minimize varies the parameters
 def roc_to_planet_dist(init_vel):
 
-    #return a large value if it tries a large velocity
-    if abs(init_vel[0]) > 20 or abs(init_vel[1]) > 20 :
-        return [100000, 100000]
-
+    global dist_argmin
     init_cond[2] = init_vel[0]
     init_cond[3] = init_vel[1]
-
-    sol = solve_ivp(Rocket_man, (t_min, t_max), init_cond, rtol = 1e-4)
+    sol = solve_ivp(Rocket_man, (t_min, t_max), init_cond, rtol = 1e-8)
 
     sol_x = sol.y[0, :]
     sol_y = sol.y[1, :]
-
     dist_next = np.sqrt((sol_x - next_planet.get_x(sol.t))**2 + (sol_y - next_planet.get_y(sol.t))**2)
     dist_argmin = np.argmin(dist_next)
     dist_x = np.abs(sol_x[dist_argmin] - next_planet.get_x(sol.t[dist_argmin]))
     dist_y = np.abs(sol_y[dist_argmin] - next_planet.get_y(sol.t[dist_argmin]))
+    dist_total = np.sqrt(dist_x**2 + dist_y**2)
     print("Distance in x, y to planet: ", dist_x, dist_y)
     print("Correct initial velocities: ", init_vel)
     print("Time taken to reach planet: ", sol.t[dist_argmin] )
     print("Minimum distance index: ", dist_argmin)
-    print("Status: ", sol.success)
-    return [dist_x, dist_y]
+    return dist_total - .001
+
 
 def plot(start_p, end_p, sol):
+    global dist_argmin
     sol_x = sol.y[0, :]
     sol_y = sol.y[1, :]
+    plt.ylim(-2, 2)
+    plt.xlim(-2, 2)
+    t_arr = np.linspace(0, max(start_p.p, end_p.p), 100)
     plt.plot(sol_x, sol_y, '*g', label = 'Rocket Path', markersize = 4)
-    plt.plot(start_p.get_x(sol.t), start_p.get_y(sol.t), 'ob', label = start_p.name, markersize = 1)
-    plt.plot(end_p.get_x(sol.t), end_p.get_y(sol.t), 'or', label = end_p.name, markersize = 1)
+    plt.plot(sol_x[0], sol_y[0], '*g', label = 'Rocket Start', markersize = 8)
+    plt.plot(end_p.get_x(t_arr), end_p.get_y(t_arr), 'or', label = end_p.name, markersize = 1 )
+    plt.plot(start_p.get_x(t_arr), start_p.get_y(t_arr), 'ob', label = start_p.name, markersize = 1 )
+#    plt.plot(start_p.get_x(sol.t), start_p.get_y(sol.t), 'ob', label = start_p.name, markersize = 1)
+#    plt.plot(end_p.get_x(sol.t), end_p.get_y(sol.t), 'or', label = end_p.name, markersize = 1)
+    plt.plot(end_p.get_x(0), end_p.get_y(0), 'ob', label = "Starting point"+end_p.name, markersize = 7)
+    plt.plot(end_p.get_x(sol.t[dist_argmin]), end_p.get_y(sol.t[dist_argmin]), 'or', label = "Closest point"+end_p.name, markersize = 7)
+    plt.plot(sol_x[dist_argmin], sol_y[dist_argmin], '*b', label = "Closest Rocket point", markersize = 9)
     plt.plot(0, 0, 'o', color = 'orange', markersize = 7)
     plt.legend()
     plt.xlabel("Au")
     plt.ylabel("Au")
     plt.show()
 
-#uses root to get a best initial velocity guess
+#Code for the Hohmann Transfer with functions for x and y delta v
+def delta_v1_x(time, cur_planet, next_planet):
+    r1 = cur_planet.get_r(time)
+    r2 = next_planet.get_r(time)
+    theta = cur_planet.w*time + cur_planet.pi_factor*np.pi
+    v1_x = np.sqrt(mu/r1)*(np.sqrt(2*r2/(r1+r2))-1)
+    return v1_x * (-1 * np.sin(theta))
+
+def delta_v1_y(time, cur_planet, next_planet):
+    r1 = cur_planet.get_r(time)
+    r2 = next_planet.get_r(time)
+    theta = cur_planet.w*time + cur_planet.pi_factor*np.pi
+    v1_y = np.sqrt(mu/r1)*(np.sqrt(2*r2/(r1+r2))-1)
+    return v1_y * np.cos(theta)
+
+#change these to the planets you want to go to/from
 cur_planet = earth
 next_planet = mars
-init_cond[0] = cur_planet.get_x(0) + .01
-init_cond[1] = cur_planet.get_y(0) + .01
+# distance factor has to change for different planets? .01 works for
+# larger starting planets(like Jupiter), but .001 is better for smaller planets(Earth, Mars)
+distance_factor = .001
+init_cond[0] = cur_planet.get_x(0) + distance_factor
+init_cond[1] = cur_planet.get_y(0) + distance_factor
+#minimum and maximum time to get to the planet. Might need to adjust depending on the planets
 t_min = 0
-t_max = .5
-v0 = [2, -6]
-next_vel = root(roc_to_planet_dist, v0)
+t_max = 1
 
-#uses the final velocity from root for one last solve_ivp. I only do this to get sol
-init_cond[2] = next_vel.x[0]
-init_cond[3] = next_vel.x[1]
+#This is code using the root function to find a "shortest" path.
+#Comment it out if you are doing Hohmann Transfer below
+v0 = [2, -6]
+next_vel = minimize(roc_to_planet_dist, v0, options = {"maxiter": 10, "disp": True})
 sol = solve_ivp(Rocket_man, (t_min, t_max), init_cond, rtol = 1e-8)
+print(sol.success)
 plot(cur_planet, next_planet, sol)
+####################################################################
+
+
+####This is code for the Hohmann Transfer. Comment it out if you are running root/plot above ####
+#init_cond[2] = earth.get_tang_vel_x(0) + delta_v1_x(0, cur_planet, next_planet)
+#init_cond[3] = earth.get_tang_vel_y(0) + delta_v1_y(0, cur_planet, next_planet)
+#sol = solve_ivp(Rocket_man, (t_min, t_max), init_cond, rtol = 1e-8)
+#plot(cur_planet, next_planet, sol)
+##############################################################################################
+
+
+
+########Old code that isn't useful as of right now ##########
+
+# def delta_v2_x(time, cur_planet, next_planet):
+#     r1 = cur_planet.get_r(time)
+#     r2 = next_planet.get_r(time)
+#     theta = cur_planet.w*time + cur_planet.pi_factor*np.pi
+#     v2_x = np.sqrt(mu/r1)*(1 - np.sqrt(2*r1/(r1+r2)))
+#     return v2_x * (-1 * np.sin(theta))
+#
+# def delta_v2_y(time, cur_planet, next_planet):
+#     r1 = cur_planet.get_r(time)
+#     r2 = next_planet.get_r(time)
+#     theta = cur_planet.w*time + cur_planet.pi_factor*np.pi
+#     v2_y = np.sqrt(mu/r1)*(1 - np.sqrt(2*r1/(r1+r2)))
+#     return v2_y * np.cos(theta)
