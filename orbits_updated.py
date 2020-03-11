@@ -1,9 +1,11 @@
 #Look into calculating total energy?
+#
 
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.integrate import solve_ivp
 from scipy.optimize import minimize
+from scipy.optimize import root_scalar
 from math import log, sin, cos
 plt.close("all")
 
@@ -107,11 +109,15 @@ def Rocket_man(time, state):                        #I think it's going to be a 
 
     return rhs
 
+dist_x = 0
+dist_y = 0
 # This function will use the global variables t_min/t_max, init_cond, and next_planet.
 # The variables cannot be passed in because minimize varies the parameters
 def roc_to_planet_dist(init_vel):
 
     global dist_argmin
+    global dist_x
+    global dist_y
     init_cond[2] = init_vel[0]
     init_cond[3] = init_vel[1]
     sol = solve_ivp(Rocket_man, (t_min, t_max), init_cond, rtol = 1e-8)
@@ -127,15 +133,17 @@ def roc_to_planet_dist(init_vel):
     print("Correct initial velocities: ", init_vel)
     print("Time taken to reach planet: ", sol.t[dist_argmin] )
     print("Minimum distance index: ", dist_argmin)
-    return dist_total - .001
+    return dist_total
 
 
 def plot(start_p, end_p, sol):
     global dist_argmin
     sol_x = sol.y[0, :]
+    sol_x = sol_x[0:dist_argmin+1]
     sol_y = sol.y[1, :]
-    plt.ylim(-2, 2)
-    plt.xlim(-2, 2)
+    sol_y = sol_y[0:dist_argmin+1]
+#    plt.ylim(-7, 7)
+#    plt.xlim(-7, 7)
     t_arr = np.linspace(0, max(start_p.p, end_p.p), 100)
     plt.plot(sol_x, sol_y, '*g', label = 'Rocket Path', markersize = 4)
     plt.plot(sol_x[0], sol_y[0], '*g', label = 'Rocket Start', markersize = 8)
@@ -146,11 +154,15 @@ def plot(start_p, end_p, sol):
     plt.plot(end_p.get_x(0), end_p.get_y(0), 'ob', label = "Starting point"+end_p.name, markersize = 7)
     plt.plot(end_p.get_x(sol.t[dist_argmin]), end_p.get_y(sol.t[dist_argmin]), 'or', label = "Closest point"+end_p.name, markersize = 7)
     plt.plot(sol_x[dist_argmin], sol_y[dist_argmin], '*b', label = "Closest Rocket point", markersize = 9)
+#    plt.plot(sol_x[5], sol_y[5], '*b', label = "Point 5", markersize = 9)
+#    plt.plot(sol_x[dist_argmin + 1], sol_y[dist_argmin + 1], '*b', label = "Past closest", markersize = 9)
+
     plt.plot(0, 0, 'o', color = 'orange', markersize = 7)
     plt.legend()
     plt.xlabel("Au")
     plt.ylabel("Au")
-    plt.show()
+    #plt.show()
+
 
 #Code for the Hohmann Transfer with functions for x and y delta v
 def delta_v1_x(time, cur_planet, next_planet):
@@ -167,6 +179,16 @@ def delta_v1_y(time, cur_planet, next_planet):
     v1_y = np.sqrt(mu/r1)*(np.sqrt(2*r2/(r1+r2))-1)
     return v1_y * np.cos(theta)
 
+def get_final_velocities(sol, dist_argmin):
+    sol_x = sol.y[0, :]
+    sol_y = sol.y[1, :]
+    delta_x = sol_x[dist_argmin] - sol_x[dist_argmin-1]
+    delta_y = sol_y[dist_argmin] - sol_y[dist_argmin-1]
+    delta_t = sol.t[dist_argmin] - sol.t[dist_argmin-1]
+    vx_final = delta_x / delta_t
+    vy_final = delta_y / delta_t
+    return [vx_final, vy_final]
+
 #change these to the planets you want to go to/from
 cur_planet = earth
 next_planet = mars
@@ -181,11 +203,17 @@ t_max = 1
 
 #This is code using the root function to find a "shortest" path.
 #Comment it out if you are doing Hohmann Transfer below
-v0 = [2, -6]
-next_vel = minimize(roc_to_planet_dist, v0, options = {"maxiter": 10, "disp": True})
+#v0 = [cur_planet.get_tang_vel_x(0) + delta_v1_x(0, cur_planet, next_planet),
+#     cur_planet.get_tang_vel_y(0) + delta_v1_y(0, cur_planet, next_planet)]
+v0 = [2, 3]
+print(v0)
+init_vels = minimize(roc_to_planet_dist, v0)
 sol = solve_ivp(Rocket_man, (t_min, t_max), init_cond, rtol = 1e-8)
-print(sol.success)
 plot(cur_planet, next_planet, sol)
+
+
+plt.show()
+
 ####################################################################
 
 
@@ -193,6 +221,7 @@ plot(cur_planet, next_planet, sol)
 #init_cond[2] = earth.get_tang_vel_x(0) + delta_v1_x(0, cur_planet, next_planet)
 #init_cond[3] = earth.get_tang_vel_y(0) + delta_v1_y(0, cur_planet, next_planet)
 #sol = solve_ivp(Rocket_man, (t_min, t_max), init_cond, rtol = 1e-8)
+#print(sol)
 #plot(cur_planet, next_planet, sol)
 ##############################################################################################
 
