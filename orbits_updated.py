@@ -109,6 +109,8 @@ def Rocket_man(time, state):                        #I think it's going to be a 
 
 dist_x = 0
 dist_y = 0
+num_calls = 0
+dist_total = 0
 # This function will use the global variables t_min/t_max, init_cond, and next_planet.
 # The variables cannot be passed in because minimize varies the parameters
 def roc_to_planet_dist(init_vel):
@@ -116,6 +118,10 @@ def roc_to_planet_dist(init_vel):
     global dist_argmin
     global dist_x
     global dist_y
+    global num_calls
+    global dist_total
+    num_calls += 1
+    print("num_calls = ", num_calls)
     init_cond[2] = init_vel[0]
     init_cond[3] = init_vel[1]
     sol = solve_ivp(Rocket_man, (t_min, t_max), init_cond, rtol = 1e-8)
@@ -223,14 +229,36 @@ t_max = 1
 #Comment it out if you are doing Hohmann Transfer below
 #v0 = [cur_planet.get_tang_vel_x(0) + delta_v1_x(0, cur_planet, next_planet),
 #     cur_planet.get_tang_vel_y(0) + delta_v1_y(0, cur_planet, next_planet)]
-v0 = [2, 3]
-print(v0)
-init_vels = minimize(roc_to_planet_dist, v0)
-sol = solve_ivp(Rocket_man, (t_min, t_max), init_cond, rtol = 1e-8)
-plot(cur_planet, next_planet, sol)
+vel_time_arr = [[], [], []]
+
+found_path = False
+for i in range(-7, 7):
+  for j in range(-7, 7):
+    v0 = [i, j]
+    minimize(roc_to_planet_dist, v0, method = "L-BFGS-B", options = {'maxfun': 50}, bounds = ((-7, 7), (-7, 7)))
+
+    print("done with minimize")
+    print("dist_total = ", dist_total)
+    if dist_total < 1e-4:
+      found_path = True
+      sol = solve_ivp(Rocket_man, (t_min, t_max), init_cond, rtol = 1e-8)
+      vel_time_arr[0].append(sol.y[2][0])
+      vel_time_arr[1].append(sol.y[3][0])
+      vel_time_arr[2].append(sol.t[dist_argmin])
+    if found_path:
+      pass
+  if found_path:
+    pass
 
 
-plt.show()
+print(vel_time_arr)
+
+
+
+#sol = solve_ivp(Rocket_man, (t_min, t_max), init_cond, rtol = 1e-8)
+#plot(cur_planet, next_planet, sol)
+
+
 
 Plot_Energy(sol)
 ###############################################################################
