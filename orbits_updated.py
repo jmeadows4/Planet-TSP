@@ -1,5 +1,3 @@
-#Look into calculating total energy?
-#
 
 import numpy as np
 import matplotlib.pyplot as plt
