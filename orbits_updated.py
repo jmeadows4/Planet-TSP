@@ -111,6 +111,10 @@ def Rocket_man(time, state):                        #I think it's going to be a 
 
 dist_x = 0
 dist_y = 0
+dist_total = 100000
+num_calls = 0
+total_calls = 0
+num_paths = 0
 # This function will use the global variables t_min/t_max, init_cond, and next_planet.
 # The variables cannot be passed in because minimize varies the parameters
 def roc_to_planet_dist(init_vel):
@@ -118,6 +122,15 @@ def roc_to_planet_dist(init_vel):
     global dist_argmin
     global dist_x
     global dist_y
+    global dist_total
+    global num_calls
+    global total_calls
+    global num_paths
+    num_calls += 1
+    total_calls += 1
+    print("current minimize calls = ", num_calls)
+    print("total calls = ", total_calls)
+    print("num paths = ", num_paths)
     init_cond[2] = init_vel[0]
     init_cond[3] = init_vel[1]
     sol = solve_ivp(Rocket_man, (t_min, t_max), init_cond, rtol = 1e-8)
@@ -149,13 +162,9 @@ def plot(start_p, end_p, sol):
     plt.plot(sol_x[0], sol_y[0], '*g', label = 'Rocket Start', markersize = 8)
     plt.plot(end_p.get_x(t_arr), end_p.get_y(t_arr), 'or', label = end_p.name, markersize = 1 )
     plt.plot(start_p.get_x(t_arr), start_p.get_y(t_arr), 'ob', label = start_p.name, markersize = 1 )
-#    plt.plot(start_p.get_x(sol.t), start_p.get_y(sol.t), 'ob', label = start_p.name, markersize = 1)
-#    plt.plot(end_p.get_x(sol.t), end_p.get_y(sol.t), 'or', label = end_p.name, markersize = 1)
     plt.plot(end_p.get_x(0), end_p.get_y(0), 'ob', label = "Starting point"+end_p.name, markersize = 7)
     plt.plot(end_p.get_x(sol.t[dist_argmin]), end_p.get_y(sol.t[dist_argmin]), 'or', label = "Closest point"+end_p.name, markersize = 7)
     plt.plot(sol_x[dist_argmin], sol_y[dist_argmin], '*b', label = "Closest Rocket point", markersize = 9)
-#    plt.plot(sol_x[5], sol_y[5], '*b', label = "Point 5", markersize = 9)
-#    plt.plot(sol_x[dist_argmin + 1], sol_y[dist_argmin + 1], '*b', label = "Past closest", markersize = 9)
 
     plt.plot(0, 0, 'o', color = 'orange', markersize = 7)
     plt.legend()
@@ -191,7 +200,7 @@ def get_final_velocities(sol, dist_argmin):
 
 #change these to the planets you want to go to/from
 cur_planet = earth
-next_planet = mars
+next_planet = venus
 # distance factor has to change for different planets? .01 works for
 # larger starting planets(like Jupiter), but .001 is better for smaller planets(Earth, Mars)
 distance_factor = .001
@@ -203,16 +212,38 @@ t_max = 1
 
 #This is code using the root function to find a "shortest" path.
 #Comment it out if you are doing Hohmann Transfer below
-#v0 = [cur_planet.get_tang_vel_x(0) + delta_v1_x(0, cur_planet, next_planet),
-#     cur_planet.get_tang_vel_y(0) + delta_v1_y(0, cur_planet, next_planet)]
-v0 = [2, 3]
-print(v0)
-init_vels = minimize(roc_to_planet_dist, v0)
-sol = solve_ivp(Rocket_man, (t_min, t_max), init_cond, rtol = 1e-8)
-plot(cur_planet, next_planet, sol)
 
 
-plt.show()
+for i in range(-7, 7):
+    for j in range(-7, 7):
+        v0 = [i, j]
+        minimize(roc_to_planet_dist, v0, method = "L-BFGS-B",
+                 options = {'maxfun': 20},
+                 bounds =((-7, 7), (-7, 7)))
+        num_calls = 0
+        if dist_total < 1e-2:
+            print("found a path")
+            num_paths += 1
+            sol = solve_ivp(Rocket_man, (t_min, t_max), init_cond, rtol = 1e-8)
+            plot(cur_planet, next_planet, sol)
+            #CHANGE YOUR DIRECTORY TO WHERE YOU WANT TO SAVE THE FIGURE
+            plt.savefig('/home/jmeadows4/Documents/PHYS498/Planet-TSP/earth_mars_path/fig'
+                        +str(num_paths)+'.png')
+            plt.close("all")
+
+
+print("all done!")
+
+
+
+#i = 7
+#v0 = [i/3, -i/1]
+#init_vels = minimize(roc_to_planet_dist, v0, method = "L-BFGS-B", bounds =((-i, i), (-i, i)), maxfun = 20)
+#sol = solve_ivp(Rocket_man, (t_min, t_max), init_cond, rtol = 1e-8)
+#plot(cur_planet, next_planet, sol)
+
+
+#plt.show()
 
 ####################################################################
 
