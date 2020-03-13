@@ -179,10 +179,11 @@ def Plot_Energy(sol):
     sol_x = sol.y[0, :]
     sol_y = sol.y[1, :]
     r_roc = np.sqrt(sol_x**2 + sol_y**2)
+    dist_next = np.sqrt((sol_x - next_planet.get_x(sol.t))**2 + (sol_y - next_planet.get_y(sol.t))**2)
 
     KE = .5*v_roc**2
-    PE = -1/r_roc
-    TE = KE - PE
+    PE_sun = -1/r_roc
+    TE = KE - PE_sun
 
     plt.figure()
     plt.plot(sol.t, TE)
@@ -242,25 +243,25 @@ for i in range(-7, 7):
     for j in range(-7, 7):
         v0 = [i, j]
         minimize(roc_to_planet_dist, v0, method = "L-BFGS-B",
-                 options = {'maxfun': 20},
-                 bounds =((-7, 7), (-7, 7)))
+#                 options = {'maxfun': 20},
+                 bounds =((-10, 10), (-10, 10)))
         num_calls = 0
-        if dist_total < 1e-2:
+        if dist_total < 1e-3:
             print("found a path")
             num_paths += 1
             sol = solve_ivp(Rocket_man, (t_min, t_max), init_cond, rtol = 1e-8)
             vel_time_arr = np.append(vel_time_arr, [[sol.y[2][0], sol.y[3][0], sol.t[dist_argmin]]], axis=0)
-            plot(cur_planet, next_planet, sol)
-            #CHANGE YOUR DIRECTORY TO WHERE YOU WANT TO SAVE THE FIGURE
-            plt.savefig('/home/jmeadows4/Documents/PHYS498/Planet-TSP/earth_mars_path/fig'
-                        +str(num_paths)+'.png')
-            plt.close("all")
+#            plot(cur_planet, next_planet, sol)
+#            #CHANGE YOUR DIRECTORY TO WHERE YOU WANT TO SAVE THE FIGURE
+#            plt.savefig('/home/jmeadows4/Documents/PHYS498/Planet-TSP/earth_mars_path/fig'
+#                        +str(num_paths)+'.png')
+#            plt.close("all")
 
 
 print("all done!")
 #creates date and time string for file name
 now = dt.datetime.now()
-t_str = now.strftime("%Y-%m-%d_%H:%M:%S")
+t_str = now.strftime("%Y-%m-%d_%H-%M-%S")
 filename = "poss_vels_"+t_str+".txt"
 
 #saves vel array as txt file
@@ -308,4 +309,5 @@ np.savetxt(filename, vel_time_arr, fmt = '%s', delimiter = ', ') #saves vel_time
 #     theta = cur_planet.w*time + cur_planet.pi_factor*np.pi
 #     v2_y = np.sqrt(mu/r1)*(1 - np.sqrt(2*r1/(r1+r2)))
 #     return v2_y * np.cos(theta)
+
 
