@@ -1,5 +1,3 @@
-#Look into calculating total energy?
-#
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -37,7 +35,7 @@ class Planet:
     def get_roche():
         q = self.mass
         return get_r(self, time) * (.49 * q**(2/3)) / (.6 * q**(2/3) + log(1 + q**(1/3)))
-#####################   Globals   ############################################
+#####################   Globals   #############################################
 
 mercury = Planet(1.652e-7, "Mercury", .2056, .3870, -1/2, .24 )
 venus = Planet(2.447e-6, "Venus", .0068, .7219, 1/3, .616)
@@ -172,6 +170,26 @@ def plot(start_p, end_p, sol):
     plt.ylabel("Au")
     #plt.show()
 
+def Plot_Energy(sol):
+    v_roc_x = sol.y[2, :]
+    v_roc_y = sol.y[3, :]
+    v_roc = np.sqrt(v_roc_x**2 + v_roc_y**2)
+
+    sol_x = sol.y[0, :]
+    sol_y = sol.y[1, :]
+    r_roc = np.sqrt(sol_x**2 + sol_y**2)
+
+    KE = .5*v_roc**2
+    PE = -1/r_roc
+    TE = KE - PE
+
+    plt.figure()
+    plt.plot(sol.t, TE)
+    plt.title("Energy vs Time")
+    plt.xlabel("Time [yrs]")
+    plt.ylabel("Total Energy [$M_{\odot} Au^{2}yrs^{-2}$]")
+    plt.show()
+
 
 #Code for the Hohmann Transfer with functions for x and y delta v
 def delta_v1_x(time, cur_planet, next_planet):
@@ -245,7 +263,13 @@ print("all done!")
 
 #plt.show()
 
-####################################################################
+#sol = solve_ivp(Rocket_man, (t_min, t_max), init_cond, rtol = 1e-8)
+#plot(cur_planet, next_planet, sol)
+
+
+
+Plot_Energy(sol)
+###############################################################################
 
 
 ####This is code for the Hohmann Transfer. Comment it out if you are running root/plot above ####
@@ -254,7 +278,7 @@ print("all done!")
 #sol = solve_ivp(Rocket_man, (t_min, t_max), init_cond, rtol = 1e-8)
 #print(sol)
 #plot(cur_planet, next_planet, sol)
-##############################################################################################
+###############################################################################
 
 
 
