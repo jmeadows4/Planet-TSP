@@ -1,5 +1,5 @@
-
 import numpy as np
+import datetime as dt
 import matplotlib.pyplot as plt
 from scipy.integrate import solve_ivp
 from scipy.optimize import minimize
@@ -113,6 +113,7 @@ dist_total = 100000
 num_calls = 0
 total_calls = 0
 num_paths = 0
+
 # This function will use the global variables t_min/t_max, init_cond, and next_planet.
 # The variables cannot be passed in because minimize varies the parameters
 def roc_to_planet_dist(init_vel):
@@ -168,7 +169,7 @@ def plot(start_p, end_p, sol):
     plt.legend()
     plt.xlabel("Au")
     plt.ylabel("Au")
-    #plt.show()
+    plt.show()
 
 def Plot_Energy(sol):
     v_roc_x = sol.y[2, :]
@@ -257,7 +258,12 @@ for i in range(-7, 7):
 
 
 print("all done!")
-np.savetxt('possible_vels.txt', vel_time_arr, fmt = '%s', delimiter = ', ') #saves vel_time_arr to text file
+
+now = dt.datetime.now()
+t_str = now.strftime("%Y-%m-%d_%H:%M:%S")
+filename = "poss_vels_"+t_str+".txt"
+
+np.savetxt(filename, vel_time_arr, fmt = '%s', delimiter = ', ') #saves vel_time_arr to text file
 # MUST HAVE 'possible_vels.txt' TEXT FILE SAVED
 #may want to have it create its own text file
 
