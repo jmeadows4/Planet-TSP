@@ -231,6 +231,11 @@ t_max = 1
 #This is code using the root function to find a "shortest" path.
 #Comment it out if you are doing Hohmann Transfer below
 
+#create array to save all possible velocities in 
+vel_time_arr = np.zeros((1, 3))
+a = np.array([["V_x", "V_y", "t"]]) #creates header for array
+vel_time_arr = np.append(a, vel_time_arr, axis=0)
+vel_time_arr = np.delete(vel_time_arr, 1, 0)
 
 for i in range(-7, 7):
     for j in range(-7, 7):
@@ -243,6 +248,7 @@ for i in range(-7, 7):
             print("found a path")
             num_paths += 1
             sol = solve_ivp(Rocket_man, (t_min, t_max), init_cond, rtol = 1e-8)
+            vel_time_arr = np.append(vel_time_arr, [[sol.y[2][0], sol.y[3][0], sol.t[dist_argmin]]], axis=0)
             plot(cur_planet, next_planet, sol)
             #CHANGE YOUR DIRECTORY TO WHERE YOU WANT TO SAVE THE FIGURE
             plt.savefig('/home/jmeadows4/Documents/PHYS498/Planet-TSP/earth_mars_path/fig'
@@ -251,6 +257,9 @@ for i in range(-7, 7):
 
 
 print("all done!")
+np.savetxt('possible_vels.txt', vel_time_arr, fmt = '%s', delimiter = ', ') #saves vel_time_arr to text file
+# MUST HAVE 'possible_vels.txt' TEXT FILE SAVED
+#may want to have it create its own text file
 
 
 
@@ -268,7 +277,6 @@ print("all done!")
 
 
 
-Plot_Energy(sol)
 ###############################################################################
 
 
