@@ -258,16 +258,13 @@ for i in range(-7, 7):
 
 
 print("all done!")
-
+#creates date and time string for file name
 now = dt.datetime.now()
 t_str = now.strftime("%Y-%m-%d_%H:%M:%S")
 filename = "poss_vels_"+t_str+".txt"
 
+#saves vel array as txt file
 np.savetxt(filename, vel_time_arr, fmt = '%s', delimiter = ', ') #saves vel_time_arr to text file
-# MUST HAVE 'possible_vels.txt' TEXT FILE SAVED
-#may want to have it create its own text file
-
-
 
 #i = 7
 #v0 = [i/3, -i/1]
@@ -311,3 +308,4 @@ np.savetxt(filename, vel_time_arr, fmt = '%s', delimiter = ', ') #saves vel_time
 #     theta = cur_planet.w*time + cur_planet.pi_factor*np.pi
 #     v2_y = np.sqrt(mu/r1)*(1 - np.sqrt(2*r1/(r1+r2)))
 #     return v2_y * np.cos(theta)
+
