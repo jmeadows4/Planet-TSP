@@ -45,7 +45,7 @@ jupiter = Planet(9.543e-4, "Jupiter", .0484, 5.2073, 11/8, 12)
 saturn = Planet(2.857e-4, "Saturn", .0542, 9.5590, 0, 29)
 uranus = Planet(4.365e-5, "Uranus", .0472, 19.1848, 13/16, 84)
 neptune = Planet(5.145e-5, "Neptune", .0086, 30.0806, 9/16, 165)
-
+planets = [mercury, venus, earth, mars, jupiter, saturn, uranus, neptune]
 init_cond = np.zeros(4)
 t_min = 0
 t_max = 0
@@ -54,6 +54,10 @@ dist_argmin = -1
 Sun_mass = 1
 G = 4*np.pi**2
 mu = Sun_mass * G
+dist_total = 100000
+num_calls = 0
+total_calls = 0
+num_paths = 0
 ###############################################################################
 
 def Rocket_man(time, state):                        #I think it's going to be a long, long time
@@ -107,29 +111,14 @@ def Rocket_man(time, state):                        #I think it's going to be a 
 
     return rhs
 
-dist_x = 0
-dist_y = 0
-dist_total = 100000
-num_calls = 0
-total_calls = 0
-num_paths = 0
-
 # This function will use the global variables t_min/t_max, init_cond, and next_planet.
 # The variables cannot be passed in because minimize varies the parameters
 def roc_to_planet_dist(init_vel):
-
-    global dist_argmin
-    global dist_x
-    global dist_y
-    global dist_total
-    global num_calls
-    global total_calls
-    global num_paths
+    #need to specify global variables so that the function does not create local variables
+    global dist_argmin, dist_total, num_calls, total_calls, num_paths
     num_calls += 1
     total_calls += 1
-    print("current minimize calls = ", num_calls)
-    print("total calls = ", total_calls)
-    print("num paths = ", num_paths)
+
     init_cond[2] = init_vel[0]
     init_cond[3] = init_vel[1]
     sol = solve_ivp(Rocket_man, (t_min, t_max), init_cond, rtol = 1e-8)
@@ -141,6 +130,9 @@ def roc_to_planet_dist(init_vel):
     dist_x = np.abs(sol_x[dist_argmin] - next_planet.get_x(sol.t[dist_argmin]))
     dist_y = np.abs(sol_y[dist_argmin] - next_planet.get_y(sol.t[dist_argmin]))
     dist_total = np.sqrt(dist_x**2 + dist_y**2)
+    print("current minimize calls = ", num_calls)
+    print("total calls = ", total_calls)
+    print("num paths = ", num_paths)
     print("Distance in x, y to planet: ", dist_x, dist_y)
     print("Correct initial velocities: ", init_vel)
     print("Time taken to reach planet: ", sol.t[dist_argmin] )
@@ -150,26 +142,28 @@ def roc_to_planet_dist(init_vel):
 
 def plot(start_p, end_p, sol):
     global dist_argmin
-    sol_x = sol.y[0, :]
-    sol_x = sol_x[0:dist_argmin+1]
-    sol_y = sol.y[1, :]
-    sol_y = sol_y[0:dist_argmin+1]
-#    plt.ylim(-7, 7)
-#    plt.xlim(-7, 7)
+    sol_x = sol.y[0, 0:dist_argmin+1]
+    sol_y = sol.y[1, 0:dist_argmin+1]
     t_arr = np.linspace(0, max(start_p.p, end_p.p), 100)
+
+    #plot Rocket path
     plt.plot(sol_x, sol_y, '*g', label = 'Rocket Path', markersize = 4)
     plt.plot(sol_x[0], sol_y[0], '*g', label = 'Rocket Start', markersize = 8)
-    plt.plot(end_p.get_x(t_arr), end_p.get_y(t_arr), 'or', label = end_p.name, markersize = 1 )
+    plt.plot(sol_x[dist_argmin], sol_y[dist_argmin], '*b', label = "Closest Rocket point", markersize = 9)
+
+    #plot planet orbits
     plt.plot(start_p.get_x(t_arr), start_p.get_y(t_arr), 'ob', label = start_p.name, markersize = 1 )
+    plt.plot(end_p.get_x(t_arr), end_p.get_y(t_arr), 'or', label = end_p.name, markersize = 1 )
+
+    #plot planet start and end points
     plt.plot(end_p.get_x(0), end_p.get_y(0), 'ob', label = "Starting point"+end_p.name, markersize = 7)
     plt.plot(end_p.get_x(sol.t[dist_argmin]), end_p.get_y(sol.t[dist_argmin]), 'or', label = "Closest point"+end_p.name, markersize = 7)
-    plt.plot(sol_x[dist_argmin], sol_y[dist_argmin], '*b', label = "Closest Rocket point", markersize = 9)
 
     plt.plot(0, 0, 'o', color = 'orange', markersize = 7)
     plt.legend()
     plt.xlabel("Au")
     plt.ylabel("Au")
-    plt.show()
+    #plt.show()
 
 def Plot_Energy(sol):
     v_roc_x = sol.y[2, :]
@@ -179,7 +173,10 @@ def Plot_Energy(sol):
     sol_x = sol.y[0, :]
     sol_y = sol.y[1, :]
     r_roc = np.sqrt(sol_x**2 + sol_y**2)
-    dist_next = np.sqrt((sol_x - next_planet.get_x(sol.t))**2 + (sol_y - next_planet.get_y(sol.t))**2)
+    distance_to_planets = []
+    for planet in planets:
+        dist_next = np.sqrt((sol_x - planet.get_x(sol.t))**2 + (sol_y - planet.get_y(sol.t))**2)
+        distance_to_planets.append(dist_next)
 
     KE = .5*v_roc**2
     PE_sun = -1/r_roc
@@ -192,15 +189,14 @@ def Plot_Energy(sol):
     plt.ylabel("Total Energy [$M_{\odot} Au^{2}yrs^{-2}$]")
     plt.show()
 
-
-#Code for the Hohmann Transfer with functions for x and y delta v
+#functions that calculate the change in velocity for the Hohmann Transfer
+######Currently not being used #######
 def delta_v1_x(time, cur_planet, next_planet):
     r1 = cur_planet.get_r(time)
     r2 = next_planet.get_r(time)
     theta = cur_planet.w*time + cur_planet.pi_factor*np.pi
     v1_x = np.sqrt(mu/r1)*(np.sqrt(2*r2/(r1+r2))-1)
     return v1_x * (-1 * np.sin(theta))
-
 def delta_v1_y(time, cur_planet, next_planet):
     r1 = cur_planet.get_r(time)
     r2 = next_planet.get_r(time)
@@ -208,6 +204,8 @@ def delta_v1_y(time, cur_planet, next_planet):
     v1_y = np.sqrt(mu/r1)*(np.sqrt(2*r2/(r1+r2))-1)
     return v1_y * np.cos(theta)
 
+#get the velocity the rocket is going when it reaches the planet
+##### Currently not being used #####
 def get_final_velocities(sol, dist_argmin):
     sol_x = sol.y[0, :]
     sol_y = sol.y[1, :]
@@ -218,96 +216,57 @@ def get_final_velocities(sol, dist_argmin):
     vy_final = delta_y / delta_t
     return [vx_final, vy_final]
 
+
 #change these to the planets you want to go to/from
 cur_planet = earth
 next_planet = venus
+
 # distance factor has to change for different planets? .01 works for
 # larger starting planets(like Jupiter), but .001 is better for smaller planets(Earth, Mars)
 distance_factor = .001
+
 init_cond[0] = cur_planet.get_x(0) + distance_factor
 init_cond[1] = cur_planet.get_y(0) + distance_factor
 #minimum and maximum time to get to the planet. Might need to adjust depending on the planets
 t_min = 0
 t_max = 1
 
-#This is code using the root function to find a "shortest" path.
-#Comment it out if you are doing Hohmann Transfer below
 
-#create array to save all possible velocities in 
+#create array to save all possible velocities in
 vel_time_arr = np.zeros((1, 3))
 a = np.array([["V_x", "V_y", "t"]]) #creates header for array
 vel_time_arr = np.append(a, vel_time_arr, axis=0)
 vel_time_arr = np.delete(vel_time_arr, 1, 0)
 
-for i in range(-7, 7):
-    for j in range(-7, 7):
+for i in range(-7, 7, 2):
+    for j in range(-7, 7, 2):
         v0 = [i, j]
         minimize(roc_to_planet_dist, v0, method = "L-BFGS-B",
 #                 options = {'maxfun': 20},
                  bounds =((-10, 10), (-10, 10)))
+        #reset the current number of function calls
         num_calls = 0
+        #if a good path is found
         if dist_total < 1e-3:
-            print("found a path")
             num_paths += 1
+            #call solveivp one more time to get the path
             sol = solve_ivp(Rocket_man, (t_min, t_max), init_cond, rtol = 1e-8)
             vel_time_arr = np.append(vel_time_arr, [[sol.y[2][0], sol.y[3][0], sol.t[dist_argmin]]], axis=0)
 #            plot(cur_planet, next_planet, sol)
-#            #CHANGE YOUR DIRECTORY TO WHERE YOU WANT TO SAVE THE FIGURE
-#            plt.savefig('/home/jmeadows4/Documents/PHYS498/Planet-TSP/earth_mars_path/fig'
+            #CHANGE YOUR DIRECTORY TO WHERE YOU WANT TO SAVE THE FIGURE
+#            plt.savefig('/home/jmeadows4/Documents/PHYS498/Planet-TSP/earth_venus_path_2/fig'
 #                        +str(num_paths)+'.png')
-#            plt.close("all")
+            plt.close("all")
+        if num_paths >= 10:
+            break
+    if num_paths >= 10:
+        break
 
-
-print("all done!")
-#creates date and time string for file name
-now = dt.datetime.now()
-t_str = now.strftime("%Y-%m-%d_%H-%M-%S")
-filename = "poss_vels_"+t_str+".txt"
-
-#saves vel array as txt file
-np.savetxt(filename, vel_time_arr, fmt = '%s', delimiter = ', ') #saves vel_time_arr to text file
-
-#i = 7
-#v0 = [i/3, -i/1]
-#init_vels = minimize(roc_to_planet_dist, v0, method = "L-BFGS-B", bounds =((-i, i), (-i, i)), maxfun = 20)
-#sol = solve_ivp(Rocket_man, (t_min, t_max), init_cond, rtol = 1e-8)
-#plot(cur_planet, next_planet, sol)
-
-
-#plt.show()
-
-#sol = solve_ivp(Rocket_man, (t_min, t_max), init_cond, rtol = 1e-8)
-#plot(cur_planet, next_planet, sol)
-
-
-
-###############################################################################
-
-
-####This is code for the Hohmann Transfer. Comment it out if you are running root/plot above ####
-#init_cond[2] = earth.get_tang_vel_x(0) + delta_v1_x(0, cur_planet, next_planet)
-#init_cond[3] = earth.get_tang_vel_y(0) + delta_v1_y(0, cur_planet, next_planet)
-#sol = solve_ivp(Rocket_man, (t_min, t_max), init_cond, rtol = 1e-8)
-#print(sol)
-#plot(cur_planet, next_planet, sol)
-###############################################################################
-
-
-
-########Old code that isn't useful as of right now ##########
-
-# def delta_v2_x(time, cur_planet, next_planet):
-#     r1 = cur_planet.get_r(time)
-#     r2 = next_planet.get_r(time)
-#     theta = cur_planet.w*time + cur_planet.pi_factor*np.pi
-#     v2_x = np.sqrt(mu/r1)*(1 - np.sqrt(2*r1/(r1+r2)))
-#     return v2_x * (-1 * np.sin(theta))
 #
-# def delta_v2_y(time, cur_planet, next_planet):
-#     r1 = cur_planet.get_r(time)
-#     r2 = next_planet.get_r(time)
-#     theta = cur_planet.w*time + cur_planet.pi_factor*np.pi
-#     v2_y = np.sqrt(mu/r1)*(1 - np.sqrt(2*r1/(r1+r2)))
-#     return v2_y * np.cos(theta)
-
-
+# #creates date and time string for file name
+# now = dt.datetime.now()
+# t_str = now.strftime("%Y-%m-%d_%H-%M-%S")
+# filename = "poss_vels_new_"+t_str+".txt"
+#
+# #saves vel array as txt file
+# np.savetxt(filename, vel_time_arr, fmt = '%s', delimiter = ', ') #saves vel_time_arr to text file
