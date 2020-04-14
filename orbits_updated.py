@@ -145,7 +145,7 @@ def plot(start_p, end_p, sol):
     sol_x = sol.y[0, 0:dist_argmin+1]
     sol_y = sol.y[1, 0:dist_argmin+1]
     t_arr = np.linspace(0, max(start_p.p, end_p.p), 100)
-
+    color = "*"
     #plot Rocket path
     plt.plot(sol_x, sol_y, '*g', label = 'Rocket Path', markersize = 4)
     plt.plot(sol_x[0], sol_y[0], '*g', label = 'Rocket Start', markersize = 8)
@@ -219,7 +219,7 @@ def get_final_velocities(sol, dist_argmin):
 
 #change these to the planets you want to go to/from
 cur_planet = earth
-next_planet = venus
+next_planet = mars
 
 # distance factor has to change for different planets? .01 works for
 # larger starting planets(like Jupiter), but .001 is better for smaller planets(Earth, Mars)
@@ -233,10 +233,7 @@ t_max = 1
 
 
 #create array to save all possible velocities in
-vel_time_arr = np.zeros((1, 3))
-a = np.array([["V_x", "V_y", "t"]]) #creates header for array
-vel_time_arr = np.append(a, vel_time_arr, axis=0)
-vel_time_arr = np.delete(vel_time_arr, 1, 0)
+vel_time_arr = []
 
 for i in range(-7, 7, 2):
     for j in range(-7, 7, 2):
@@ -251,16 +248,46 @@ for i in range(-7, 7, 2):
             num_paths += 1
             #call solveivp one more time to get the path
             sol = solve_ivp(Rocket_man, (t_min, t_max), init_cond, rtol = 1e-8)
-            vel_time_arr = np.append(vel_time_arr, [[sol.y[2][0], sol.y[3][0], sol.t[dist_argmin]]], axis=0)
-#            plot(cur_planet, next_planet, sol)
+            new_vx = sol.y[2][0]
+            new_vy = sol.y[3][0]
+            new_t = sol.t[dist_argmin]
+            unique_solution = True
+            for v_x, v_y, t in vel_time_arr:
+                if abs(new_vx - v_x) < .7 and abs(new_vy - v_y) < .7 :
+                    unique_solution = False
+            if unique_solution:
+                vel_time_arr.append([new_vx, new_vy, new_t])
+                plot(cur_planet, next_planet, sol)
             #CHANGE YOUR DIRECTORY TO WHERE YOU WANT TO SAVE THE FIGURE
-#            plt.savefig('/home/jmeadows4/Documents/PHYS498/Planet-TSP/earth_venus_path_2/fig'
-#                        +str(num_paths)+'.png')
-            plt.close("all")
+                plt.savefig('/home/jmeadows4/Documents/PHYS498/Planet-TSP/earth_mars_path/fig'
+                            +str(num_paths)+'.png')
+                plt.close("all")
         if num_paths >= 10:
             break
     if num_paths >= 10:
         break
+
+min_vel = 10000
+min_vel_x = 0
+min_vel_y = 0
+min_t = 0
+for vels_time in vel_time_arr:
+    vel_x = vels_time[0]
+    vel_y = vels_time[1]
+    vel = np.sqrt(vel_x**2 + vel_y**2)
+    if vel < min_vel:
+        min_vel = vel
+        min_vel_x = vel_x
+        min_vel_y = vel_y
+
+
+print("MIN VELS NEEDED: ",min_vel_x, min_vel_y)
+for v_x, v_y, t in vel_time_arr:
+    print("V_x : ", v_x, "      V_Y : ", v_y, "      time : ", t)
+
+
+
+
 
 #
 # #creates date and time string for file name
