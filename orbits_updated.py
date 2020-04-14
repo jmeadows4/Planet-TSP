@@ -166,21 +166,36 @@ def plot(start_p, end_p, sol):
     #plt.show()
 
 def Plot_Energy(sol):
+            
     v_roc_x = sol.y[2, :]
     v_roc_y = sol.y[3, :]
     v_roc = np.sqrt(v_roc_x**2 + v_roc_y**2)
-
+    
     sol_x = sol.y[0, :]
     sol_y = sol.y[1, :]
     r_roc = np.sqrt(sol_x**2 + sol_y**2)
-    distance_to_planets = []
-    for planet in planets:
-        dist_next = np.sqrt((sol_x - planet.get_x(sol.t))**2 + (sol_y - planet.get_y(sol.t))**2)
-        distance_to_planets.append(dist_next)
+    #    
+    planet = [mercury, venus, earth, mars, jupiter, saturn, uranus, neptune]
+    PE_array = np.zeros((len(planets), len(r_roc)))
+    for i in range(len(planet)):
+        rel_dist = np.sqrt((sol_x - planet[i].get_x(sol.t))**2 + (sol_y - planet[i].get_y(sol.t))**2)
+        PE = -G*planet[i].mass/rel_dist
+        for j in range(len(r_roc)):
+            PE_array[i, j] = PE[j]
+    
+    PE_sun = -G*1/r_roc
+    PE_merc = PE_array[ 0, :]
+    PE_venus = PE_array[1, :]
+    PE_earth = PE_array[2, :]
+    PE_mars = PE_array[3, :]
+    PE_jupiter = PE_array[4, :]
+    PE_saturn = PE_array[5, :]
+    PE_uranus = PE_array[6, :]
+    PE_neptune = PE_array[7, :]
 
     KE = .5*v_roc**2
-    PE_sun = -1/r_roc
-    TE = KE - PE_sun
+    TPE = PE_sun + PE_merc + PE_venus + PE_earth + PE_mars + PE_jupiter + PE_saturn + PE_uranus + PE_neptune
+    TE = KE + TPE
 
     plt.figure()
     plt.plot(sol.t, TE)
