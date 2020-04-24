@@ -140,21 +140,6 @@ def roc_to_planet_dist(init_vel):
     print("Time taken to reach planet: ", sol.t[dist_argmin] )
     return dist_total
 
-
-def plot(start_p, end_p):
-    t_arr = np.linspace(0, max(start_p.p, end_p.p), 100)
-    #plot planet orbits
-    plt.xlim(-1.5, 2.5)
-    plt.plot(sol_x, sol_y, "*g", markersize = 4)
-    plt.plot(start_p.get_x(t_arr), start_p.get_y(t_arr), 'ob', label = start_p.name, markersize = 1 )
-    plt.plot(end_p.get_x(t_arr), end_p.get_y(t_arr), 'or', label = end_p.name, markersize = 1 )
-
-    plt.plot(0, 0, 'o', color = 'orange', markersize = 7)
-    plt.legend()
-    plt.xlabel("Au")
-    plt.ylabel("Au")
-    plt.show()
-
 def plot_gif(start_p, end_p, sol):
     #Rocket path
     sol_x = sol.y[0, :]
