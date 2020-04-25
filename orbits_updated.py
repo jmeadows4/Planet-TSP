@@ -165,11 +165,10 @@ def plot(start_p, end_p, sol):
     plt.ylabel("Au")
     #plt.show()
     
-    def plot_paths(vel_time_arr): #up to 12 paths
+def plot_paths(vel_time_arr): #up to 12 paths
     global dist_argmin
     t_arr = np.linspace(0, max(cur_planet.p, next_planet.p), 1000)
     
-    color_arr = np.array(['*b', '*g', '*r', '*c', '*m', '*y', '*b', '*g', '*r', '*c', '*m', '*y'])
     t_arr = np.linspace(0, max(cur_planet.p, next_planet.p), 1000)
     plt.plot(cur_planet.get_x(t_arr), cur_planet.get_y(t_arr), 'ok', label = cur_planet.name, markersize = 1 )
     plt.plot(next_planet.get_x(t_arr), next_planet.get_y(t_arr), 'ok', label = next_planet.name, markersize = 1 )
@@ -185,7 +184,7 @@ def plot(start_p, end_p, sol):
         dist_argmin = np.argmin(dist_next)
         sol_x = sol.y[0, 0:dist_argmin+1]
         sol_y = sol.y[1, 0:dist_argmin+1]
-        plt.plot(sol_x, sol_y, color_arr[i], label = 'path'+str(i+1), markersize = 4)
+        plt.plot(sol_x, sol_y, '*', label = 'path'+str(i+1), markersize = 4)
         plt.legend()
 
 def Plot_Energy(sol):
