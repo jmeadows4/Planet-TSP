@@ -164,6 +164,29 @@ def plot(start_p, end_p, sol):
     plt.xlabel("Au")
     plt.ylabel("Au")
     #plt.show()
+    
+    def plot_paths(vel_time_arr): #up to 12 paths
+    global dist_argmin
+    t_arr = np.linspace(0, max(cur_planet.p, next_planet.p), 1000)
+    
+    color_arr = np.array(['*b', '*g', '*r', '*c', '*m', '*y', '*b', '*g', '*r', '*c', '*m', '*y'])
+    t_arr = np.linspace(0, max(cur_planet.p, next_planet.p), 1000)
+    plt.plot(cur_planet.get_x(t_arr), cur_planet.get_y(t_arr), 'ok', label = cur_planet.name, markersize = 1 )
+    plt.plot(next_planet.get_x(t_arr), next_planet.get_y(t_arr), 'ok', label = next_planet.name, markersize = 1 )
+    plt.plot(0, 0, 'o', color = 'orange', markersize = 7)
+    
+    for i in range(len(vel_time_arr[:, 0])):
+        init_cond[2] = vel_time_arr[i, 0]
+        init_cond[3] = vel_time_arr[i, 1]
+        sol = solve_ivp(Rocket_man, (t_min, t_max), init_cond, rtol = 1e-8)
+        sol_x = sol.y[0, :]
+        sol_y = sol.y[1, :]
+        dist_next = np.sqrt((sol_x - next_planet.get_x(sol.t))**2 + (sol_y - next_planet.get_y(sol.t))**2)
+        dist_argmin = np.argmin(dist_next)
+        sol_x = sol.y[0, 0:dist_argmin+1]
+        sol_y = sol.y[1, 0:dist_argmin+1]
+        plt.plot(sol_x, sol_y, color_arr[i], label = 'path'+str(i+1), markersize = 4)
+        plt.legend()
 
 def Plot_Energy(sol):
             
