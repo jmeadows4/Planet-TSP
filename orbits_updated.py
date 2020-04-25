@@ -270,7 +270,8 @@ t_max = 1
 
 
 #create array to save all possible velocities in
-vel_time_arr = []
+vel_time_arr = np.zeros((1,3))
+vel_time_arr = np.delete(vel_time_arr, 0, 0)
 
 for i in range(-7, 7, 2):
     for j in range(-7, 7, 2):
@@ -285,24 +286,29 @@ for i in range(-7, 7, 2):
             num_paths += 1
             #call solveivp one more time to get the path
             sol = solve_ivp(Rocket_man, (t_min, t_max), init_cond, rtol = 1e-8)
+            new_v_arr = np.zeros((1, 3))
             new_vx = sol.y[2][0]
             new_vy = sol.y[3][0]
             new_t = sol.t[dist_argmin]
+            new_v_arr[0, 0] = new_vx
+            new_v_arr[0, 1] = new_vy
+            new_v_arr[0, 2] = new_t
             unique_solution = True
             for v_x, v_y, t in vel_time_arr:
                 if abs(new_vx - v_x) < .7 and abs(new_vy - v_y) < .7 :
                     unique_solution = False
             if unique_solution:
-                vel_time_arr.append([new_vx, new_vy, new_t])
-                plot(cur_planet, next_planet, sol)
+                vel_time_arr = np.append(vel_time_arr, new_v_arr, axis=0)
+#                plot(cur_planet, next_planet, sol)
             #CHANGE YOUR DIRECTORY TO WHERE YOU WANT TO SAVE THE FIGURE
-                plt.savefig('/home/jmeadows4/Documents/PHYS498/Planet-TSP/earth_mars_path/fig'
-                            +str(num_paths)+'.png')
-                plt.close("all")
+#                plt.savefig('/home/jmeadows4/Documents/PHYS498/Planet-TSP/earth_mars_path/fig'
+#                            +str(num_paths)+'.png')
+#                plt.close("all")
         if num_paths >= 10:
             break
     if num_paths >= 10:
         break
+    
 
 min_vel = 10000
 min_vel_x = 0
